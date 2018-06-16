@@ -1,0 +1,419 @@
+---
+title: "Fifth Week: Bootstrap and Resampling Methods"
+subtitle: "Nonparametric Hypothesis tests"
+author: "Kayhan Momeni"
+date: "24 Esfand 1396"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+<div align="center">
+<img  src="images/NonparametricStatistics_iStock.jpg"  align = 'center'>
+</div>
+
+> <p dir="RTL"> 
+لطفا به سوالات زیر پاسخ دهید.
+در همه سوالات سطح دقت را ۹۵ درصد در نظر بگیرید.
+</p>
+
+***
+<p dir="RTL">
+ابتدا باید پکیج های مورد نیاز را صدا بزنیم:
+</p>
+```{r, eval=FALSE}
+library(dplyr)
+library(highcharter)
+library(coin)
+library(readr)
+library(tidyr)
+library(broom)
+```
+```{r include=FALSE, cache=FALSE}
+library(dplyr)
+library(highcharter)
+library(coin)
+library(readr)
+library(tidyr)
+library(broom)
+```
+***
+
+<h5 dir="RTL">
+۱. شرکتی میخواهد تحقیق کند آیا درآمد نمایندگی های آن یکسان است. برای بررسی این موضوع هشت نمایندگی
+به طور تصادفی انتخاب شده اند که به ترتیب میزان فروش آنها عبارت است از 
+102, 300, 102, 100, 205, 105, 71 , 92.
+با توجه به داده آیا عملکرد نمایندگی ها یکسان است؟
+</h5>
+<h6 dir="RTL">
+پاسخ:
+</h6>
+
+<p dir="RTL">
+نمودار میزان فروش شعبه ها، به این صورت است:
+</p>
+```{r, warning=FALSE}
+mat = matrix(0, nrow = 8, ncol = 2)
+dat = as.data.frame(mat)
+dat$V1=1:8
+dat$V2=c(102, 300, 102, 100, 205, 105, 71, 92)
+
+hchart(dat, type="column", hcaes(x=V1, y=V2)) %>%
+  hc_xAxis(title = list(text = "Branch No.")) %>%
+  hc_yAxis(title = list(text = "Sales Amount")) %>%
+  hc_add_theme(hc_theme_elementary()) 
+```
+<p dir="RTL">
+اگر عملکرد همه ی شعبه ها یکسان بود، باید همه ی ستون ها تقریبا برابر می شد که به نظر می رسد اینگونه نباشد. برای بررسی دقیقتر موضوع، از آزمون 
+Chi-Square Goodness-of-Fit 
+استفاده می کنیم تا ببینیم آیا توزیع ستون ها در نمودار با یکدیگر برابر است یا خیر (تابع توزیع یونیفرم است یا نه):
+</p>
+```{r, warning=FALSE}
+prob = c(1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8, 1/8)
+chisq.test(dat$V2, p=prob)
+```
+<p dir="RTL">
+همانطور که مشخص است، به خاطر کوچک بودن 
+p-value، 
+فرض صفر (یونیفرم بودن توزیع فروش) رد می شود. بنابراین عملکرد شعبه ها دارای اختلاف آماری معنادار است.
+</p>
+***
+
+<h5 dir="RTL">
+۲. آمار فروش شرکتی در دو نوع شعبه سنتی و مدرن در زیر آمده است. آیا تفاوتی در عملکرد دو نوع شعبه وجود دارد؟
+</h5>
+<h5>
+Classical stores: 50, 50, 60, 70, 75, 80, 90, 85
+</h5>
+<h5>
+Modern stores: 55, 75, 80, 90, 105, 65
+</h5>
+
+<h6 dir="RTL">
+پاسخ:
+</h6>
+<p dir="RTL">
+بیایید ابتدا نگاهی به آمار فروش شعبه ها بیندازیم:
+</p>
+```{r, warning=FALSE}
+mydata = data.frame(Score = c(50, 50, 60, 70, 75, 80, 90, 85, 55, 75, 80, 90, 105, 65),
+                    StoreType = factor(c(rep("Classical",8), rep("Modern",6))))
+
+hchart(mydata, type="column", hcaes(y=Score, group=StoreType)) %>%
+  hc_xAxis(title = list(text = "Branch No.")) %>%
+  hc_yAxis(title = list(text = "Sales Amount")) %>%
+  hc_add_theme(hc_theme_elementary())
+```
+<p dir="RTL">
+</p>
+
+<p dir="RTL">
+در این سوال، برای تشخیص معناداری تفاوت در میانگین ها، باید از 
+Permutation Test
+استفاده کنیم. بدین صورت که فرض کنیم هر دو گروه نمونه اعدادی از یک تابع توزیع باشند. بنابراین می 
+توان همه ی آن ها را در یک گروه در نظر گرفت. سپس باید همه ی  انتخاب های ۸ تایی از این ۱۴ تا عدد را در نظر گرفت و میانگینشان را حساب کرد. به ازای هر انتخاب، ۶ عدد وجود دارند که انتخاب نشده اند. میانگین آن ها را هم به صورت جدا باید حساب کنیم. سپس اختلاف میانگین هر انتخاب ۸ تایی با گروه ۶ تایی متناظرش را حساب کنیم. این اختلاف ها یک تابع توزیعی دارند.
+سپس برای داده های اصلی هم در گروه ۸ تایی سنتی و ۶ تایی مدرن میانگین ها را حساب می کنیم و اختلافشان را نگاه می کنیم که در کجای تابع توزیع اختلاف ها قرار دارد. اگر در ۹۵ درصد بازه ی اطمینان وسط بود، نمی توان در خصوص رد فرض صفر حرفی زد. اما اگر در ۲.۵ درصد ابتدا و انتهای تابع توزیع بود، می توان فرض صفر را رد کرد.
+</p>
+<p dir="RTL">
+خوشبختانه کتابخانه ی 
+coin 
+عملیات بالا را برای ما انجام میدهد:
+</p>
+```{r, warning=FALSE}
+oneway_test(Score~StoreType, data=mydata, distribution="exact")
+```
+<p dir="RTL">
+با توجه به بالا بودن 
+p-value، 
+نمی توان فرض صفر را رد کرد. یعنی نمی توان نتیجه گرفت که در آمار فروش شعبه های سنتی و مدرن، تفاوت وجود دارد.
+</p>
+***
+
+<h5 dir="RTL">
+۳. اطلاعات حسابداری ۱۵ شعبه که به صورت تصادفی انتخاب شده اند به شرح زیر است:
+</h5>
+<h5>
+509, 517, 502, 629, 830, 911, 847, 803, 727, 853, 757, 730, 774, 718, 904
+</h5>
+<h5 dir="RTL">
+شرکت مذکور برای ارتقای فروش خود یک طرح تبلیغاتی جدید را اجرا میکند. پس از طرح جدید نتایج عملکرد شعبه ها  به صورت زیر 
+اندازه گیری شده است:
+</h5>
+<h5>
+517, 508, 523, 730, 821, 940, 818, 821, 842, 842, 709, 688, 787, 780, 901
+</h5>
+<h5 dir="RTL">
+آیا تبلیغات جدید عملکرد فروش را بالا برده است؟
+</h5>
+<h6 dir="RTL">
+پاسخ:
+</h6>
+<p dir="RTL">
+حل این سوال بسیار مشابه سوال قبل است:
+</p>
+```{r, warning=FALSE}
+mydata = data.frame(Score = c(509, 517, 502, 629, 830, 911, 847, 803, 727, 853, 757, 730, 774, 718, 904,
+                              517, 508, 523, 730, 821, 940, 818, 821, 842, 842, 709, 688, 787, 780, 901),
+                    Type = factor(c(rep("Before the Advertisement",15), rep("After the Advertisement",15))))
+
+hchart(mydata, type="column", hcaes(y=Score, group=Type)) %>%
+  hc_xAxis(title = list(text = "Branch No.")) %>%
+  hc_yAxis(title = list(text = "Sales Amount")) %>%
+  hc_add_theme(hc_theme_elementary())
+
+oneway_test(Score~Type, data=mydata, distribution="exact")
+```
+<p dir="RTL">
+در اینجا هم نمی توان تفاوت معناداری در عملکرد شعب پیش و پس از تبلیغات مشاهده کرد.
+</p>
+***
+
+<h5 dir="RTL">
+۴. محصولی در سه رنگ سفید آبی و قرمز تولید شده است.
+پنج شعبه از فروشگاه سازنده محصول به صورت تصادفی انتخاب شده و اطلاعات فروش آنها در زیر آمده است.
+</h5>
+
+| Store | White | Blue | Red |
+| :----: | :----: | :----: | :----: |
+| 1. |	510 |	925 |	730 |
+| 2. | 720 | 735 | 745 |
+| 3. |	930 |	753 |	875 |
+| 4. |	754 |	685 |	610 |
+| 5. |	105	|  |  |
+
+<h5 dir="RTL">
+با توجه به داده های بالا آیا رنگی خاص در میزان فروش محصولات تاثیر دارد؟
+</h5>
+<h6 dir="RTL">
+پاسخ:
+</h6>
+<p dir="RTL">
+میانگین فروش هر رنگ به صورت زیر است:
+</p>
+
+```{r, warning=FALSE}
+mydata = data.frame(Score = c(510, 720, 930, 754, 105,
+                              925, 735, 753, 685,
+                              730, 745, 875, 610),
+                    Color = factor(c(rep("White",5), rep("Blue",4), rep("Red",4))))
+mydata %>%
+  group_by(Color) %>%
+  summarise(Score = mean(Score)) -> dat
+
+hchart(dat, type="column", hcaes(x=Color, y=Score)) %>%
+  hc_xAxis(title = list(text = "Color")) %>%
+  hc_yAxis(title = list(text = "Average Sales Amount")) %>%
+  hc_add_theme(hc_theme_elementary())
+```
+<p dir="RTL">
+برای تعیین اینکه آیا تفاوت در میانگین ها معنادار است یا خیر، از آزمون 
+Kruskal-Wallis 
+استفاده می کنیم:
+</p>
+```{r, warning=FALSE}
+kruskal_test(Score~Color, data=mydata)
+```
+<p dir="RTL">
+همانطور که مشخص است، نمی توان از طریق این آزمون، تفاوت معناداری در میزان فروش گروه های رنگی مختلف نتیجه گرفت.
+</p>
+
+***
+
+<h5 dir="RTL">
+۵. یک موسسه نظرسنجی نظرات مردم در مورد رضایت از یک محصول که در ماه های فروردین اردیبهشت خرداد و تیر که از طریق تلویزیون 
+تبلیغ شده است را مورد ارزیابی قرار می دهد.این کار بدین صورت است از افرادی در ماه اول سوال پرسیده می شود و در ماه آینده نیز از همان فرد سوال می شود که آیا از محصول مذکور راضی هستی یا خیر.
+با توجه به داده ایی که در پیوست تمرین آمده است آیا تبلیغات تاثیر مثبتی در افزایش رضایت مردم داشته است؟
+</h5>
+<h6 dir="RTL">
+پاسخ:
+</h6>
+<p dir="RTL">
+ابتدا بد نیست به درصد افراد راضی از محصول در هر ماه نگاهی بیندازیم:
+</p>
+```{r, warning=FALSE}
+tv = read_csv("/Users/kayhan/Desktop/tv.csv")
+
+tv %>%
+  mutate(tmp = 1, PersonID = cumsum(tmp)) %>%
+  select(PersonID, March, April, May, Jun) -> tv
+
+tv %>%
+  gather(Month, Idea, -PersonID) -> mydata
+
+tv %>%
+  select(March, April, May, Jun) ->tv
+
+mydata%>%
+  group_by(Month) %>%
+  summarise(satisfied = sum(Idea==1)*100/15) -> stat
+
+stat$Month <- factor(stat$Month, levels=c("March", "April", "May", "Jun"))
+
+stat %>%
+  arrange(Month) ->stat
+
+hchart(stat, type="column", hcaes(x=Month, y=satisfied)) %>%
+  hc_xAxis(title = list(text = "Month")) %>%
+  hc_yAxis(title = list(text = "Percentage of Satisfied People")) %>%
+  hc_add_theme(hc_theme_elementary())
+```
+<p dir="RTL">
+حالا می خواهیم ببینیم افزایش رضایت در ماه 
+Jun 
+معنادار بوده است یا خیر. برای این منظور، چون با یک مسئله ی اندازه گیری های تکرار شونده روبروییم و می خواهیم آزمون غیر پارامتری مناسب را اجرا کنیم، از آزمون 
+Friedman 
+استفاده می کنیم:
+</p>
+```{r, warning=FALSE}
+friedman.test(as.matrix(tv))
+```
+<p dir="RTL">
+چون 
+p-value 
+بزرگ است، نمی توان فرض صفر را رد کرد. یعنی نمی توان نتیجه گرفت که تبلیغات تاثیر معناداری داشته است.
+</p>
+***
+
+<h5 dir="RTL"> 
+۶. شرکتی در حال تحقیق بر روی این موضوع است که آیا جمعیت شهر تاثیری در نوع میزان مصرف محصولات شرکت دارد.
+با توجه به داده زیر این موضوع را تحقیق کنید؟
+</h5>
+
+| City size |	| Frequency of service usage | |
+| :---: |  :---:  | :---: | :---: | 
+| | Always	| Sometime | Never |
+| Small	| 151	| 252	| 603 |
+| Medium	| 802	| 603	| 405 |
+| Large	| 753	| 55	| 408 |
+
+<h6 dir="RTL">
+پاسخ:
+</h6>
+<p dir="RTL">
+ابتدا به نمودار تعداد داده ها نگاه کنیم:
+</p>
+```{r, warning=FALSE}
+mydata = matrix(c(151, 802, 753, 252, 603, 55, 603, 405, 408), nrow=3, ncol=3)
+colnames (mydata) <- c("Always", "Sometime", "Never")
+rownames (mydata) <- c("Small", "Medium", "Large")
+
+hchart(mydata) %>%
+  hc_xAxis(title = list(text = "Frequency of Service Usage")) %>%
+  hc_yAxis(title = list(text = "City Size")) %>%
+  hc_add_theme(hc_theme_elementary())
+```
+<p dir="RTL">
+می توان به جای رنگ، از ویژگی مساحت هم برای نشان دادن مقدار هر مربع استفاده کرد:
+</p>
+
+```{r, warning=FALSE, fig.width=20, fig.height=10}
+plot(as.table(mydata), xlab="City Size", ylab="Frequency of Service Usage", main="")
+```
+<p dir="RTL">
+به نظر می رسد که دو متغیر به یکدیگر وابسته اند. برای آزمون آماری این قضیه، از آزمون 
+Chi-squared Test of Independence 
+استفاده می کنیم:
+</p>
+```{r, warning=FALSE}
+chisq.test(mydata)
+```
+<p dir="RTL">
+همانطور که مشخص است، به خاطر کوچک بودن 
+p-value، 
+فرض استقلال متغیر ها رد می شود. بنابر این متغیر ها به یکدیگر وابسته اند.
+</p>
+***
+
+<h5 dir="RTL"> 
+۷. شرکتی انتظار دارد با ارایه محصول الف میزان فروش محصول ب افزایش یابد.
+به همین منظور به طور تصادفی از صد مشتری خود اطلاعات مصرف جمع آوری می نماید.
+با توجه به داده های که داده شده آیا ربط معناداری بین فروش این دو محصول وجود دارد؟
+</h5>
+
+<h6 dir="RTL">
+پاسخ:
+</h6>
+<p dir="RTL">
+بیایید در ابتدا نگاهی به نمودار میزان مصرف محصول ب بر حسب میزان مصرف محصول الف بیندازیم:
+</p>
+```{r, warning=FALSE}
+consumption = read_csv("/Users/kayhan/Desktop/consumption.csv")
+
+modlss <- loess(B~A, data = consumption)
+fit <- augment(modlss) %>% arrange(A)
+
+hchart(consumption, type="scatter", hcaes(x=A, y=B)) %>%
+  hc_add_series(fit, type = "spline", hcaes(x = A, y = .fitted), name = "Fit", id = "fit") %>% 
+  hc_add_series(fit, type = "arearange", hcaes(x = A, low = .fitted - 2*.se.fit, 
+                                               high = .fitted + 2*.se.fit),
+                linkedTo = "fit") %>%
+  hc_xAxis(title = list(text = "Usage of A")) %>%
+  hc_yAxis(title = list(text = "Usage of B")) %>%
+  hc_add_theme(hc_theme_elementary())
+```
+<p dir="RTL">
+به نظر میرسد که همبستگی بین میزان مصرف محصول الف و ب وجود ندارد. برای سنجش آماری این امر، از تست 
+Spearman Correlation 
+استفاده می کنیم:
+</p>
+```{r, warning=FALSE}
+cor(consumption$A, consumption$B, method = "spearman")
+```
+<p dir="RTL">
+همانطور که مشخص است، میزان همبستگی بسیار پایین است و میزان مصرف محصول الف، تاثیری روی میزان مصرف محصول ب ندارد.
+</p>
+***
+
+<h5 dir="RTL"> 
+۸. یک شرکت از ۲۰۰۰ نفر از مشتریان خود عامل خرید محصول را مورد سوال قرار میدهد 
+که خلاصه اطلاعات آن را در زیر می توانید مشاهده کنید
+</h5>
+
+| Characteristics	| Male	| Female |
+| :---: |  :---:  | :---: |
+| Price	| 301	| 502 |
+| Design	| 353	| 155 |
+| Color	| 558	| 153 |
+
+<h5 dir="RTL"> 
+آیا جنسیت تاثیری در مشخصه کاربری کالا دارد؟
+</h5>
+
+<h6 dir="RTL">
+پاسخ:
+</h6>
+<p dir="RTL">
+حل این سوال بسیار مشابه سوال ۶ است. ابتدا به نمودار تعداد داده ها نگاه کنیم:
+</p>
+```{r, warning=FALSE}
+mydata = matrix(c(301, 353, 558, 502, 155, 153), nrow=3, ncol=2)
+colnames (mydata) <- c("Male", "Female")
+rownames (mydata) <- c("Price", "Design", "Color")
+
+hchart(mydata) %>%
+  hc_xAxis(title = list(text = "Gender")) %>%
+  hc_yAxis(title = list(text = "Characteristics")) %>%
+  hc_add_theme(hc_theme_elementary())
+```
+<p dir="RTL">
+می توان به جای رنگ، از ویژگی مساحت هم برای نشان دادن مقدار هر مربع استفاده کرد:
+</p>
+
+```{r, warning=FALSE, fig.width=20, fig.height=10}
+plot(as.table(mydata), xlab="Characteristics", ylab="Gender", main="")
+```
+<p dir="RTL">
+به نظر می رسد که دو متغیر به یکدیگر وابسته اند. برای آزمون آماری این قضیه، از آزمون 
+Chi-squared Test of Independence 
+استفاده می کنیم:
+</p>
+```{r, warning=FALSE}
+chisq.test(mydata)
+```
+<p dir="RTL">
+همانطور که مشخص است، به خاطر کوچک بودن 
+p-value، 
+فرض استقلال متغیر ها رد می شود. بنابر این متغیر ها به یکدیگر وابسته اند. یعنی عامل خرید محصول به جنسیت وابسته است.
+</p>
+
